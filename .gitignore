@@ -1,0 +1,6 @@
+data/
+modelos/
+fotos_campo/
+venv/
+.ipynb_checkpoints/
+__pycache__/

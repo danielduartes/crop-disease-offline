@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo: classificador de folhas (offline)</title>
+<style>
+  body { font-family: sans-serif; max-width: 640px; margin: 24px auto; padding: 0 16px; }
+  .aviso { background: #fff3cd; border: 1px solid #e0c36a; padding: 12px; border-radius: 6px; }
+  #previa { max-width: 100%; max-height: 320px; margin-top: 16px; display: none; }
+  li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<h1>Classificador de folhas</h1>
+<p class="aviso"><strong>Demonstração técnica, não é diagnóstico.</strong>
+Este modelo foi treinado com fotos de folhas isoladas em fundo liso (PlantVillage) e
+errou quase todas as fotos de folhas em ambiente real que testei. Serve para mostrar o
+fluxo treino, conversão e execução offline, e não para decidir tratamento de plantas.</p>
+
+<input type="file" id="arquivo" accept="image/*">
+<p id="status">Carregando modelo...</p>
+<img id="previa" alt="foto escolhida">
+<ol id="resultado"></ol>
+
+<script src="tf.min.js"></script>
+<script>
+const CLASSES = [
+  "Pepper__bell___Bacterial_spot", "Pepper__bell___healthy", "Potato___Early_blight",
+  "Potato___Late_blight", "Potato___healthy", "Tomato_Bacterial_spot", "Tomato_Early_blight",
+  "Tomato_Late_blight", "Tomato_Leaf_Mold", "Tomato_Septoria_leaf_spot",
+  "Tomato_Spider_mites_Two_spotted_spider_mite", "Tomato__Target_Spot",
+  "Tomato__Tomato_YellowLeaf__Curl_Virus", "Tomato__Tomato_mosaic_virus", "Tomato_healthy"
+];
+const status = document.getElementById("status");
+let modelo = null;
+
+tf.loadLayersModel("modelo/model.json")
+  .then(m => { modelo = m; status.textContent = "Modelo carregado. Escolha uma foto."; })
+  .catch(e => { status.textContent = "Erro ao carregar o modelo: " + e.message; });
+
+document.getElementById("arquivo").addEventListener("change", e => {
+  const arquivo = e.target.files[0];
+  if (!arquivo || !modelo) return;
+  const img = document.getElementById("previa");
+  img.onload = () => classificar(img);
+  img.src = URL.createObjectURL(arquivo);
+  img.style.display = "block";
+});
+
+async function classificar(img) {
+  const saida = tf.tidy(() => {
+    let x = tf.browser.fromPixels(img).cast("float32");
+    x = tf.image.resizeNearestNeighbor(x, [160, 160], false, true);
+    x = x.div(127.5).sub(1).expandDims(0);
+    return modelo.predict(x);
+  });
+  const p = Array.from(await saida.data());
+  saida.dispose();
+  console.log("probabilidades:", p.map(v => v.toFixed(3)));
+  const top = p.map((v, i) => ({ nome: CLASSES[i], v })).sort((a, b) => b.v - a.v).slice(0, 3);
+  document.getElementById("resultado").innerHTML =
+    top.map(t => `<li>${t.nome}: ${(t.v * 100).toFixed(1)}%</li>`).join("");
+}
+</script>
+</body>
+</html>
