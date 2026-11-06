@@ -1,3 +1,4 @@
+# Arquivo responsável por reconstruir a arquitetura, carregar os pesos do '.npz' e convertê-los pra TensorFlow.js
 import sys, types
 
 class Falso(types.ModuleType):

@@ -1,3 +1,4 @@
+# Arquivo responsável por tirar os pesos do modelo treinado e gravar num formato que não depende da versão do Keras
 import numpy as np
 import tensorflow as tf
 
